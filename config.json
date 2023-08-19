@@ -1,0 +1,9 @@
+{
+    "BASE_URL": "https://api.cedrom-sni.com",
+    "API_ENDPOINTS": {
+        "AUTH": "/api/auth/login",
+        "SEARCH_SIMPLE": "/api/documents/SearchResults/Simple",
+        "SEARCH_ADVANCED": "/api/v2/documents/Search",
+        "DOCUMENT": "/api/v2/documents/"
+    }
+}
