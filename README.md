@@ -15,8 +15,6 @@ Pour lancer le programme, on exécute le fichier documentFetcher.py. Par exemple
 `python3.11 documentFetcher.py`
 
 ## Documentation Eurêka
-Outre le script documentFetcher.py, le répertoire contient:
-* deux fichiers pdf fournissant des informations sur les clés à utiliser dans la requête de recherche;
-* un fichier swagger.json offrant le détail de l'API. On y trouve plusieurs "endpoints" qui n'ont pas été exploités dans cette V1 du programme.
+Outre le script documentFetcher.py, le répertoire contient deux fichiers pdf fournissant des informations sur les clés à utiliser dans la requête de recherche.
 
 Pour toute question: Pascal Brissette (pascal.brissette@mcgill.ca)
