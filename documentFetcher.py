@@ -2,6 +2,8 @@ import requests
 import json
 import pandas as pd
 import getpass
+import time
+import os
 
 # Load configuration from config.json
 with open("config.json", "r") as file:
@@ -201,18 +203,19 @@ def fetch_full_documents(token, metadata_list):
         full_document_data = get_document(token, document_id)
 
         # Extraction de nouvelles métadonnées
-        doc_author = full_document_data['documentContent']['author']
-        doc_section = full_document_data['documentContent']['section']
-        doc_kicker = full_document_data['documentContent']['kicker']
-        doc_coverage = full_document_data['documentContent']['coverage']
-        doc_subjects = full_document_data['documentContent']['subjects']
-        doc_persons = full_document_data['documentContent']['persons']
-        doc_organizations = full_document_data['documentContent']['organizations']
-        doc_locations = full_document_data['documentContent']['locations']
-        doc_lead = full_document_data['documentContent']['lead']
+        doc_content = full_document_data['documentContent']
+        doc_author = doc_content.get('author', "")
+        doc_section = doc_content.get('section', "")
+        doc_kicker = doc_content.get('kicker', "")
+        doc_coverage = doc_content.get('coverage', "")
+        doc_subjects = doc_content.get('subjects', "")
+        doc_persons = doc_content.get('persons', "")
+        doc_organizations = doc_content.get('organizations', "")
+        doc_locations = doc_content.get('locations', "")
+        doc_lead = doc_content.get('lead', "")
 
         # Extraction du texte d'un document
-        doc_text = full_document_data['documentContent']['text']
+        doc_text = doc_content.get('text', "")
         
         # Ajout du texte et des nouvelles métadonnées dans la liste existante
         doc_metadata["auteur"] = doc_author
@@ -229,12 +232,17 @@ def fetch_full_documents(token, metadata_list):
     return metadata_list
 
 
-def save_to_csv(data_list, filename="documents.csv"):
-    # Conversion de la liste en DataFrame
+def save_to_csv(data_list, filename="document.csv"):
+    # Convert the list to a DataFrame
     df = pd.DataFrame(data_list)
     
-    # Sauvegarde du DataFrame sous .csv
-    df.to_csv(filename, index=False)
+    # Check if file exists
+    if os.path.exists(filename):
+        # Append without writing the header
+        df.to_csv(filename, mode='a', header=False, index=False)
+    else:
+        # Save new DataFrame to .csv
+        df.to_csv(filename, index=False)
 
 
 def master_search_to_csv():
@@ -252,6 +260,7 @@ def master_search_to_csv():
     search_results = advanced_search(token, search_query, document_type=document_type,docUrl=docUrl,startDate=startDate,endDate=endDate,maxCount=maxCount)
     
     # Extraction des métadonnées issues de la requête
+    start_time = time.time()
     metadata_list = extract_metadata(search_results)
     
     # Itération sur les identifiants de la liste pour obtenir les textes et de nouvelles métadonnées
@@ -259,6 +268,12 @@ def master_search_to_csv():
     
     # Transformation de la liste en DataFrame, puis sauvegarde en .csv
     save_to_csv(full_data_list)
-    print("Data saved to documents.csv")
+
+    end_time = time.time()  # End time after loading
+    
+    duration = end_time - start_time
+
+    print(f"Data saved to {startDate}_{endDate}.csv")
+    print(f"L'opération a pris {duration:.2f} secondes.")
 
 master_search_to_csv()
