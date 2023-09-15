@@ -2,3 +2,6 @@
 myenv/
 parseSwagger.py
 swagger.json
+*.qmd
+.RData
+.Rhistory

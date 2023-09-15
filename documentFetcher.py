@@ -266,8 +266,10 @@ def master_search_to_csv():
     # Itération sur les identifiants de la liste pour obtenir les textes et de nouvelles métadonnées
     full_data_list = fetch_full_documents(token, metadata_list)
     
+    filename = f"{startDate}_{endDate}.csv"
+
     # Transformation de la liste en DataFrame, puis sauvegarde en .csv
-    save_to_csv(full_data_list)
+    save_to_csv(full_data_list, filename)
 
     end_time = time.time()  # End time after loading
     
