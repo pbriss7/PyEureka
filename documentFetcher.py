@@ -134,15 +134,6 @@ def advanced_search(token, query, startDate, endDate, maxCount, document_type, d
 
 
 def get_document(token, document_id):
-    """Fonction de requête d'un document
-
-    Args:
-        token (str): token obtenu par la fonction authenticate
-        document_id (str): identifiant unique
-
-    Returns:
-        dictionnaire: dictionnaire de dictionnaires
-    """
     url = BASE_URL + ENDPOINTS["DOCUMENT"] + document_id
     headers = {
         "Accept": "application/json",
@@ -155,8 +146,8 @@ def get_document(token, document_id):
     if response.status_code == 200:
         return response.json()
     else:
-        print(f"Error {response.status_code}: {response.text}")
-        return None
+        raise Exception(f"Error {response.status_code}: {response.text}")
+
 
 
 
@@ -187,95 +178,115 @@ def extract_metadata(search_results):
 
     return metadata_list
 
-def fetch_full_documents(token, metadata_list):
-    """Cette fonction prend en entrée le token et la liste des métadonnées comprenant, notamment, les Identifiants qui serviront à obtenir les textes complets.
-
-    Args:
-        token (str): token issu de la fonction authenticate()
-        metadata_list (list): liste des métadonnées issues de l'exécution de la fonction extract_metadata() 
-
-    Returns:
-        list: liste comprenant, pour chaque document, les métadonnées d'un document et son texte complet
-    """
-    for doc_metadata in metadata_list:
-        # Obtention d'un document
-        document_id = doc_metadata["Document ID"]
-        full_document_data = get_document(token, document_id)
-
-        # Extraction de nouvelles métadonnées
-        doc_content = full_document_data['documentContent']
-        doc_author = doc_content.get('author', "")
-        doc_section = doc_content.get('section', "")
-        doc_kicker = doc_content.get('kicker', "")
-        doc_coverage = doc_content.get('coverage', "")
-        doc_subjects = doc_content.get('subjects', "")
-        doc_persons = doc_content.get('persons', "")
-        doc_organizations = doc_content.get('organizations', "")
-        doc_locations = doc_content.get('locations', "")
-        doc_lead = doc_content.get('lead', "")
-
-        # Extraction du texte d'un document
-        doc_text = doc_content.get('text', "")
-        
-        # Ajout du texte et des nouvelles métadonnées dans la liste existante
-        doc_metadata["auteur"] = doc_author
-        doc_metadata["section"] = doc_section
-        doc_metadata["texte_complet"] = doc_text
-        doc_metadata["kicker"] = doc_kicker
-        doc_metadata["couverture"] = doc_coverage
-        doc_metadata["sujets"] = doc_subjects
-        doc_metadata["personnes"] = doc_persons
-        doc_metadata["organisations"] = doc_organizations
-        doc_metadata["lieux"] = doc_locations
-        doc_metadata["lead"] = doc_lead
-
-    return metadata_list
-
-
 def save_to_csv(data_list, filename="document.csv"):
     # Convert the list to a DataFrame
     df = pd.DataFrame(data_list)
     
+    # Construct the absolute path
+    save_path = os.path.join("/Users/pascalbrissette/Downloads", filename)
+    
     # Check if file exists
-    if os.path.exists(filename):
+    if os.path.exists(save_path):
         # Append without writing the header
-        df.to_csv(filename, mode='a', header=False, index=False)
+        df.to_csv(save_path, mode='a', header=False, index=False)
     else:
         # Save new DataFrame to .csv
-        df.to_csv(filename, index=False)
-
-
-def master_search_to_csv():
-    """Fonction maîtresse. L'utilisateur doit fournir son ID + mot de passe, puis il est guidé dans l'interrogation de la bdd.
-    """
-    token = authenticate()
+        df.to_csv(save_path, index=False)
     
-    # Informations requises pour la requête (les paramètres peuvent être modifiés au besoin)
-    search_query = input("Enter your search query: ")
+    print(f"Data saved to {save_path}")
+
+
+def fetch_full_documents(token, metadata_list):
+    for doc_metadata in metadata_list:
+        document_id = doc_metadata["Document ID"]
+        try:
+            full_document_data = get_document(token, document_id)
+
+            # Extraction de nouvelles métadonnées
+            doc_content = full_document_data['documentContent']
+            doc_author = doc_content.get('author', "")
+            doc_section = doc_content.get('section', "")
+            doc_kicker = doc_content.get('kicker', "")
+            doc_coverage = doc_content.get('coverage', "")
+            doc_subjects = doc_content.get('subjects', "")
+            doc_persons = doc_content.get('persons', "")
+            doc_organizations = doc_content.get('organizations', "")
+            doc_locations = doc_content.get('locations', "")
+            doc_lead = doc_content.get('lead', "")
+
+            # Extraction du texte d'un document
+            doc_text = doc_content.get('text', "")
+        
+            # Ajout du texte et des nouvelles métadonnées dans la liste existante
+            doc_metadata["auteur"] = doc_author
+            doc_metadata["section"] = doc_section
+            doc_metadata["texte_complet"] = doc_text
+            doc_metadata["kicker"] = doc_kicker
+            doc_metadata["couverture"] = doc_coverage
+            doc_metadata["sujets"] = doc_subjects
+            doc_metadata["personnes"] = doc_persons
+            doc_metadata["organisations"] = doc_organizations
+            doc_metadata["lieux"] = doc_locations
+            doc_metadata["lead"] = doc_lead
+
+        except Exception as e:
+            error_msg = f"Error fetching document with ID {document_id}: {e}"
+            print(error_msg)
+            log_error(error_msg)
+
+    return metadata_list
+
+def master_search_to_csv(token, search_query, startDate, endDate, maxCount):
     document_type = "News"
     docUrl = "https"
-    startDate = input("Date de départ de la requête (YYYY-MM-DD)")
-    endDate = input("Date finale de la requête (YYYY-MM-DD)")
-    maxCount = input("Combien de document au maximum?")
-    search_results = advanced_search(token, search_query, document_type=document_type,docUrl=docUrl,startDate=startDate,endDate=endDate,maxCount=maxCount)
     
-    # Extraction des métadonnées issues de la requête
-    start_time = time.time()
+    search_results = advanced_search(token, search_query, document_type=document_type, docUrl=docUrl, startDate=startDate, endDate=endDate, maxCount=maxCount)
+    
+    # Extraction of metadata from the search results
     metadata_list = extract_metadata(search_results)
     
-    # Itération sur les identifiants de la liste pour obtenir les textes et de nouvelles métadonnées
+    # Iterate over the IDs in the list to get the full texts and additional metadata
     full_data_list = fetch_full_documents(token, metadata_list)
     
-    filename = f"{startDate}_{endDate}.csv"
-
-    # Transformation de la liste en DataFrame, puis sauvegarde en .csv
+    # Modify the path below if you want to save the files in a different location
+    filename = os.path.join('/Users/pascalbrissette/Downloads/', search_query, f"{startDate}_{endDate}.csv")
+    
+    # Ensure the directory exists, if not, create it
+    directory = os.path.dirname(filename)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    # Save the data to the CSV file
     save_to_csv(full_data_list, filename)
 
-    end_time = time.time()  # End time after loading
+
+def log_error(error_message, filename="errors.log"):
+    """Log the error message to a file."""
+    with open(filename, "a") as file:
+        file.write(error_message + "\n")
+
+def automated_data_fetch():
+    # Authenticate and get the token
+    token = authenticate()
+
+    # Define the search query
+    search_query = input("Enter your search query: ")
     
-    duration = end_time - start_time
+    # Define the start and end years
+    start_year = 2000
+    end_year = 2002
+    
+    # Define 6-month intervals
+    intervals = [("01-01", "03-31"),("04-01", "06-30"), ("07-01", "09-30"), ("10-01", "12-31")]
+    
+    # Loop over the years and intervals
+    for year in range(start_year, end_year + 1):
+        for interval in intervals:
+            startDate = f"{year}-{interval[0]}"
+            endDate = f"{year}-{interval[1]}"
+            maxCount = "1000"
+            
+            # Fetch data for the 6-month interval
+            master_search_to_csv(token, search_query, startDate, endDate, maxCount)
 
-    print(f"Data saved to {startDate}_{endDate}.csv")
-    print(f"L'opération a pris {duration:.2f} secondes.")
-
-master_search_to_csv()
+automated_data_fetch()
